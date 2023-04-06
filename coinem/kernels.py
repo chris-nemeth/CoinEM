@@ -5,6 +5,8 @@ from typing import Tuple
 from simple_pytree import Pytree, static_field
 import jax.numpy as jnp
 
+static_hidden_field = static_field(init=False, repr=False)
+
 
 @jaxtyped
 @beartype
@@ -17,20 +19,19 @@ class ComputeDistances(Pytree):
     """
 
     x: Float[Array, "N D"]
-    dists: Float[Array, "N N D"] = static_field(
-        init=False, repr=False
-    )  # dists attribute for caching distances!
-    square_dists: Float[Array, "N N"] = static_field(
-        init=False, repr=False
-    )  # square_dists attribute for caching sqaured-distances!
+
+    # dists attribute for caching distances!
+    dists: Float[Array, "N N D"] = static_hidden_field()
+
+    # square_dists attribute for caching sqaured-distances!
+    square_dists: Float[Array, "N N"] = static_hidden_field()
 
     def __post_init__(self):
-        self.dists = (
-            self.x[:, None, :] - self.x[None, :, :]
-        )  # [N N D], Matrix of entries [(x - y)].
-        self.square_dists = jnp.sum(
-            self.dists**2, axis=-1
-        )  # [N N], Matrix of entries [(x - y)^2].
+        # Matrix of entries [(x - y)].
+        self.dists = self.x[:, None, :] - self.x[None, :, :]  # [N N D]
+
+        # Matrix of entries [(x - y)^2].
+        self.square_dists = jnp.sum(self.dists**2, axis=-1)  # [N N]
 
 
 @jaxtyped
@@ -96,10 +97,3 @@ class RBF(Pytree):
         dK = jnp.sum(K[:, :, None] * distances.dists, axis=1) / self.h**2  # [N N D]
 
         return K, dK  # Kxx, ∇x Kxx
-
-
-# -------- ASIDE ------------
-# Alternative way to compute K and dK, would be to use vmap and grad.
-# This is useful if we want to do arbitrary kernel functions.
-#
-#
