@@ -41,10 +41,10 @@ class SVGD(AbstractGradient):
         """
         N = x.shape[0]  # N
         K, dK = self.kernel.K_dK(x)  # Kxx, ∇x Kxx
+        s = score(self.log_prob)(x)  # ∇x p(x)
 
-        return (
-            jnp.matmul(K, score(self.log_prob)(x)) + dK
-        ) / N  # Φ(x) = (Kxx ∇x p(x) + ∇x Kxx) / n
+        # Φ(x) = (Kxx ∇x p(x) + ∇x Kxx) / N
+        return (jnp.matmul(K, s) + dK) / N
 
 
 def score(
