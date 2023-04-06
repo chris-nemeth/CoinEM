@@ -1,4 +1,4 @@
-from coinem.kernels import RBF, AutoRBF, ComputeDistances
+from coinem.kernels import RBF, MedianRBF, ComputeDistances
 
 import pytest
 import jax.numpy as jnp
@@ -104,7 +104,7 @@ median_bandwith_b = jnp.array([1.6986436])
         (array_b, true_dists_b, true_square_dists_b, median_bandwith_b),
     ],
 )
-def test_autorbf(
+def test_median_rbf(
     array: Float[Array, "N D"],
     true_dists: Float[Array, "N N D"],
     true_square_dists: Float[Array, "N N"],
@@ -113,7 +113,7 @@ def test_autorbf(
     N = array.shape[0]
     D = array.shape[-1]
 
-    rbf = AutoRBF()
+    rbf = MedianRBF()
 
     # Compute K and dK:
     K, dK = rbf.K_dK(array)

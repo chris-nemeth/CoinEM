@@ -4,6 +4,7 @@ from jaxtyping import Array, Float, jaxtyped
 from typing import Tuple
 from simple_pytree import Pytree, static_field
 from functools import partial
+from abc import abstractmethod
 import jax.numpy as jnp
 
 static_hidden_field = partial(static_field, init=False, repr=False)
@@ -38,7 +39,7 @@ class ComputeDistances(Pytree):
 @jaxtyped
 @beartype
 @dataclass
-class AutoRBF(Pytree):
+class MedianRBF(Pytree):
     """RBF kernel with automatic bandwidth selection as the median of the pairwise distances."""
 
     def K_dK(
@@ -98,3 +99,89 @@ class RBF(Pytree):
         dK = jnp.sum(K[:, :, None] * distances.dists, axis=1) / self.h**2  # [N N D]
 
         return K, dK  # Kxx, ∇x Kxx
+
+
+@jaxtyped
+@beartype
+@dataclass
+class AutoKernel(Pytree):
+    """Auto diff / vmap kernel."""
+
+    @abstractmethod
+    def __call__(
+        self, xi: Float[Array, "D"], yi: Float[Array, "D"]
+    ) -> Float[Array, "1"]:
+        """Compute kernel between two points.
+
+        Args:
+            xi (Float[Array, "D"]): First point.
+            yi (Float[Array, "D"]): Second point.
+
+        Returns:
+            Float[Array, "1"]: Kernel value.
+        """
+        raise NotImplementedError
+
+    def K(self, x: Float[Array, "N D"]) -> Float[Array, "N N"]:
+        """Compute kernel Gram matrix Kxx.
+
+        Args:
+            x (Float[Array, "N D"])): Input data.
+
+        Returns:
+            Float[Array, "N N"]: Kernel Gram matrix.
+        """
+        return vmap(lambda xi: vmap(lambda yi: self(xi, yi))(x))(x)
+
+    def dK(self, x: Float[Array, "N D"]) -> Float[Array, "N D"]:
+        """Compute kernel gradient ∇x Kxx.
+
+        Args:
+            x (Float[Array, "N D"])): Input data.
+
+        Returns:
+            Float[Array, "N N D"]: Kernel gradient.
+        """
+        return jnp.sum(
+            vmap(lambda yi: vmap(lambda xi: grad(self)(xi, yi))(x))(x), axis=0
+        )
+
+    def K_dK(
+        self, x: Float[Array, "N D"]
+    ) -> Tuple[Float[Array, "N N"], Float[Array, "N D"]]:
+        """Compute kernel Gram matrix Kxx and gradient ∇x Kxx.
+
+        Args:
+            x (Float[Array, "N D"])): Input data.
+
+        Returns:
+            Tuple[Float[Array, "N N"], Float[Array, "N N D"]]: Kernel Gram matrix and gradient.
+        """
+        return self.K(x), self.dK(x)
+
+
+@jaxtyped
+@beartype
+@dataclass
+class AutoRBF(AutoKernel):
+    """Auto diff / vmap RBF kernel.
+
+    Args:
+        h (Float[Array, "1"]): Bandwidth parameter if median_trick is False. Defaults to 1.0.
+    """
+
+    h: Float[Array, "1"] = jnp.array([1.0])
+
+    def __call__(
+        self, xi: Float[Array, "D"], yi: Float[Array, "D"]
+    ) -> Float[Array, "1"]:
+        """Compute kernel between two points.
+
+        Args:
+            xi (Float[Array, "D"]): First point.
+            yi (Float[Array, "D"]): Second point.
+
+        Returns:
+            Float[Array, "1"]: Kernel value.
+        """
+        return jnp.exp(-0.5 * jnp.sum((xi - yi) ** 2) / self.h**2)
