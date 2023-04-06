@@ -3,9 +3,10 @@ from dataclasses import dataclass
 from jaxtyping import Array, Float, jaxtyped
 from typing import Tuple
 from simple_pytree import Pytree, static_field
+from functools import partial
 import jax.numpy as jnp
 
-static_hidden_field = static_field(init=False, repr=False)
+static_hidden_field = partial(static_field, init=False, repr=False)
 
 
 @jaxtyped
