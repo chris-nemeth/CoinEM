@@ -1,6 +1,6 @@
 from beartype import beartype
 from dataclasses import dataclass
-from jaxtyping import Array, Float
+from jaxtyping import Array, Float, jaxtyped
 from simple_pytree import Pytree
 from beartype.typing import Callable
 import jax.numpy as jnp
@@ -10,6 +10,8 @@ from abc import abstractmethod
 from coinem.kernels import AbstractKernel
 
 
+@jaxtyped
+@beartype
 class AbstractGradient(Pytree):
     """Base class for gradients."""
 
@@ -26,6 +28,8 @@ class AbstractGradient(Pytree):
         raise NotImplementedError
 
 
+@jaxtyped
+@beartype
 @dataclass
 class SVGD(AbstractGradient):
     log_prob: Callable[[Float[Array, "D"]], Float[Array, "1"]]
@@ -47,6 +51,8 @@ class SVGD(AbstractGradient):
         return (jnp.matmul(K, s) + dK) / N
 
 
+@jaxtyped
+@beartype
 def score(
     log_prob: Callable[[Float[Array, "D"]], Float[Array, "1"]]
 ) -> Callable[[Float[Array, "N D"]], Float[Array, "N D"]]:
