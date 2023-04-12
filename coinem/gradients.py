@@ -12,6 +12,7 @@ from coinem.kernels import AbstractKernel
 
 @jaxtyped
 @beartype
+@dataclass
 class AbstractGradient(Pytree):
     """Base class for gradients."""
 
@@ -32,10 +33,12 @@ class AbstractGradient(Pytree):
 @beartype
 @dataclass
 class SVGD(AbstractGradient):
-    log_prob: Callable[[Float[Array, "D"]], Float[Array, "1"]]
-    kernel: AbstractKernel
-
-    def __call__(self, x: Float[Array, "N D"]) -> Float[Array, "N D"]:
+    def __call__(
+        self,
+        x: Float[Array, "N D"],
+        log_prob: Callable[[Float[Array, "D"]], Float[Array, "1"]],
+        kernel: AbstractKernel,
+    ) -> Float[Array, "N D"]:
         """
         Args:
             x (Float[Array, "N D"]): The current particles.
@@ -44,8 +47,8 @@ class SVGD(AbstractGradient):
             Float[Array, "N D"]: The updated particles.
         """
         N = x.shape[0]  # N
-        K, dK = self.kernel.K_dK(x)  # Kxx, ∇x Kxx
-        s = score(self.log_prob)(x)  # ∇x p(x)
+        K, dK = kernel.K_dK(x)  # Kxx, ∇x Kxx
+        s = score(log_prob)(x)  # ∇x p(x)
 
         # Φ(x) = (Kxx ∇x p(x) + ∇x Kxx) / N
         return (jnp.matmul(K, s) + dK) / N
