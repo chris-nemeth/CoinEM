@@ -9,8 +9,8 @@ import jax.numpy as jnp
 static_hidden_field = partial(static_field, init=False, repr=False)
 
 
-@jaxtyped
-@beartype
+# @jaxtyped
+# @beartype
 @dataclass
 class ComputeDistances(Pytree):
     """Compute distances between points in a batch.

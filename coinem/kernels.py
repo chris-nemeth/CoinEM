@@ -11,8 +11,8 @@ import jax.numpy as jnp
 from coinem.utils import ComputeDistances
 
 
-@jaxtyped
-@beartype
+# @jaxtyped
+# @beartype
 @dataclass
 class AbstractKernel(Pytree):
     """Base class for kernels."""
@@ -32,8 +32,8 @@ class AbstractKernel(Pytree):
         raise NotImplementedError
 
 
-@jaxtyped
-@beartype
+# @jaxtyped
+# @beartype
 @dataclass
 class RBF(AbstractKernel):
     """RBF kernel with static bandwidth selection.
@@ -65,8 +65,8 @@ class RBF(AbstractKernel):
         return K, dK  # Kxx, ∇x Kxx
 
 
-@jaxtyped
-@beartype
+# @jaxtyped
+# @beartype
 @dataclass
 class MeanRBF(AbstractKernel):
     """RBF kernel with automatic bandwidth selection as the mean of the pairwise distances."""
@@ -97,8 +97,8 @@ class MeanRBF(AbstractKernel):
         return K, dK  # Kxx, ∇x Kxx
 
 
-@jaxtyped
-@beartype
+# @jaxtyped
+# @beartype
 @dataclass
 class MedianRBF(AbstractKernel):
     """RBF kernel with automatic bandwidth selection as the median of the pairwise distances."""
@@ -129,7 +129,7 @@ class MedianRBF(AbstractKernel):
         return K, dK  # Kxx, ∇x Kxx
 
 
-@jaxtyped
+# @jaxtyped
 # @beartype
 @dataclass
 class AutoKernel(AbstractKernel):
@@ -188,7 +188,7 @@ class AutoKernel(AbstractKernel):
         return self.K(x), self.dK(x)
 
 
-@jaxtyped
+# @jaxtyped
 # @beartype
 @dataclass
 class AutoRBF(AutoKernel):
@@ -233,7 +233,7 @@ class AutoMedianRBF(AutoKernel):
         Returns:
             Float[Array, "1"]: Kernel value.
         """
-        return jnp.exp(-0.5 * jnp.sum((xi - yi) ** 2) / h**2)
+        return jnp.exp(-0.5 * jnp.sum((xi - yi) ** 2) / h**2).squeeze()
 
     def K(self, x: Float[Array, "N D"]) -> Float[Array, "N N"]:
         """Compute kernel Gram matrix Kxx.
