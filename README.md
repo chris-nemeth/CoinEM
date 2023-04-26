@@ -1,2 +1,3 @@
-# CoinEM
-Coin implementation of the ParEM for latent variable models
+# C🪙in EM 
+
+Learning rate free expectation maximation in JAX.
