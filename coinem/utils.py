@@ -33,3 +33,23 @@ class ComputeDistances(Pytree):
 
         # Matrix of entries [(x - y)^2].
         self.square_dists = jnp.sum(self.dists**2, axis=-1)  # [N N]
+
+
+def cum_mean(x: Float[Array, "*"], axis: int = 0) -> Float[Array, "*"]:
+    """
+    Computes the cumulative mean of a JAX array along the specified axis.
+
+    Args:
+      x (Float[Array, "*"]): A JAX array.
+      axis (int): An integer specifying the axis along which to compute the
+        cumulative mean. Default is 0.
+
+    Returns:
+      A JAX array containing the cumulative mean along the specified axis.
+    """
+    n = jnp.arange(1, x.shape[axis] + 1)
+    cumsum = jnp.cumsum(x, axis=axis)
+    n_shape = [1] * x.ndim
+    n_shape[axis] = -1
+    n = n.reshape(n_shape)
+    return cumsum / n
