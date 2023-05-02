@@ -1,7 +1,8 @@
-from coinem.utils import ComputeDistances
+from coinem.utils import ComputeDistances, cum_mean
 
 import pytest
 import jax.numpy as jnp
+import jax.random as jr
 from jaxtyping import Float, Array
 
 array_a = jnp.array([[1.0], [2.0], [3.0]])
@@ -45,3 +46,15 @@ def test_compute_distances(
     # Check values:
     assert jnp.allclose(distances.dists, true_dists)
     assert jnp.allclose(distances.square_dists, true_square_dists)
+
+
+def test_cum_mean():
+    # Define test input array
+    rng = jr.PRNGKey(0)
+    x = jr.normal(rng, (5, 3))
+
+    # Compute expected result using NumPy
+    expected_result = jnp.cumsum(x, axis=0) / jnp.arange(1, x.shape[0] + 1)[:, None]
+
+    # Compare result with expected result using pytest
+    assert jnp.allclose(cum_mean(x), expected_result)
