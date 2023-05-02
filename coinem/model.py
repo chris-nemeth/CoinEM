@@ -1,9 +1,6 @@
-from beartype import beartype
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import Array, Float
 from simple_pytree import Pytree
 from jax import grad, vmap
-
-from abc import abstractmethod
 
 from simple_pytree import Pytree
 from dataclasses import dataclass
@@ -13,13 +10,15 @@ import jax.numpy as jnp
 
 from coinem.dataset import Dataset
 
+__all__ = ["AbstractModel"]
+
 
 @dataclass
 class AbstractModel(Pytree):
     """Base class for p(θ, x)."""
 
     def log_prob(
-        self, latent: Float[Array, "D"], theta: Float[Array, "Q"]
+        self, latent: Float[Array, "D"], theta: Float[Array, "Q"], data: Dataset
     ) -> Float[Array, ""]:
         """Compute gradient of the objective function at x.
 
@@ -34,7 +33,7 @@ class AbstractModel(Pytree):
         raise NotImplementedError
 
     def score_latent(
-        self, latent: Float[Array, "D"], theta: Float[Array, "Q"]
+        self, latent: Float[Array, "D"], theta: Float[Array, "Q"], data: Dataset
     ) -> Float[Array, "D"]:
         """
         Compute gradient of the objective function at latent variables. FOR A SINGLE PARTICLE.
@@ -47,10 +46,10 @@ class AbstractModel(Pytree):
             Float[Array, "D"]: The gradient of the log-density for the latent variables of shape (D,).
         """
 
-        return grad(self.log_prob, argnums=0)(latent, theta)
+        return grad(self.log_prob, argnums=0)(latent, theta, data)
 
     def score_theta(
-        self, latent: Float[Array, "D"], theta: Float[Array, "Q"]
+        self, latent: Float[Array, "D"], theta: Float[Array, "Q"], data: Dataset
     ) -> Float[Array, "D"]:
         """
         Compute gradient of the objective function at theta.
@@ -63,10 +62,13 @@ class AbstractModel(Pytree):
             Float[Array, "D"]: The gradient of the log-density for the latent variables of shape (D,).
         """
 
-        return grad(self.log_prob, argnums=1)(latent, theta)
+        return grad(self.log_prob, argnums=1)(latent, theta, data)
 
     def score_latent_particles(
-        self, latent_particles: Float[Array, "N D"], theta: Float[Array, "Q"]
+        self,
+        latent_particles: Float[Array, "N D"],
+        theta: Float[Array, "Q"],
+        data: Dataset,
     ) -> Float[Array, "N D"]:
         """
         Compute gradient of the objective function at latent variables. MULTIPLE PARTICLES.
@@ -79,12 +81,15 @@ class AbstractModel(Pytree):
             Float[Array, "N D"]: The gradient of the log-density for the latent latent_particles of shape (N, D).
         """
 
-        return vmap(lambda particle: self.score_latent(particle, theta))(
+        return vmap(lambda particle: self.score_latent(particle, theta, data))(
             latent_particles
         )
 
     def average_score_theta(
-        self, latent_particles: Float[Array, "N D"], theta: Float[Array, "Q"]
+        self,
+        latent_particles: Float[Array, "N D"],
+        theta: Float[Array, "Q"],
+        data: Dataset,
     ) -> Float[Array, "Q"]:
         """
         Compute gradient of the objective function at theta. MULTIPLE PARTICLES.
@@ -98,12 +103,17 @@ class AbstractModel(Pytree):
         """
 
         return jnp.mean(
-            vmap(lambda particle: self.score_theta(particle, theta))(latent_particles),
+            vmap(lambda particle: self.score_theta(particle, theta, data))(
+                latent_particles
+            ),
             axis=0,
         )
 
     def average_hessian_theta(
-        self, latent_particles: Float[Array, "N D"], theta: Float[Array, "Q"]
+        self,
+        latent_particles: Float[Array, "N D"],
+        theta: Float[Array, "Q"],
+        data: Dataset,
     ) -> Float[Array, "Q Q"]:
         """
         Compute gradient of the objective function at theta. MULTIPLE PARTICLES.
@@ -118,7 +128,9 @@ class AbstractModel(Pytree):
 
         return jnp.mean(
             vmap(
-                lambda particle: jacobian(self.score_theta, argnums=1)(particle, theta)
+                lambda particle: jacobian(self.score_theta, argnums=1)(
+                    particle, theta, data
+                )
             )(latent_particles),
             axis=0,
         )  # <- Not checked.
