@@ -1,205 +1,229 @@
-import jax.numpy as jnp
-import jax.random as jr
-from jax.tree_util import Partial
-from jax import lax
+""" 🐒 Versions of the expectation maximisation algorithm. 🦓 """
 
+import jax.random as jr
+
+from jax.random import KeyArray
 from jaxtyping import Array, Float
+from typing import Tuple
+
+from coinem.expectation_maximisation import expectation_maximisation
+from coinem.model import AbstractModel
+from coinem.maximisation_step import MaximisationStep
+from coinem.expectation_step import (
+    SteinExpectationStep,
+    SoulExpectationStep,
+    ParticleGradientExpectationStep,
+)
+from coinem.dataset import Dataset
+from coinem.gradient_transforms import cocob, GradientTransformation
 
 import optax as ox
 
-from coinem.kernels import MedianRBF, MeanRBF, RBF
-from coinem.gradient_transforms import adacoin
-from coinem.gradient_flow import svgd
-from coinem.model import AbstractModel
 
-# TODO: Abstract out E-step and M-step, make it modular.
-# TODO: Abstract out the kernel, to override the default MedianRBF.
+def svgd(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    latent_optimiser: GradientTransformation,
+    theta_optimiser: GradientTransformation,
+    num_steps: int,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """
+    Perform the Stein variational gradient descent EM algorithm.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        latent_optimiser (GradientTransformation): The latent optimiser.
+        theta_optimiser (GradientTransformation): The parameter optimiser.
+        num_steps (int): The number of steps to perform, K.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+
+    return expectation_maximisation(
+        expectation_step=SteinExpectationStep(model=model, optimiser=latent_optimiser),
+        maximisation_step=MaximisationStep(model=model, optimiser=theta_optimiser),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
 
 
 def coin_svgd(
     model: AbstractModel,
+    data: Dataset,
     latent_init: Float[Array, "N D"],
     theta_init: Float[Array, "Q"],
     num_steps: int,
-    alpha: float = 0.0,
-):
-    # Define coinEM optimiser:
-    optimizer = adacoin(alpha)
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the CoinEM algorithm.
 
-    # Initialise optimiser states:
-    theta_opt_state = optimizer.init(theta_init)
-    latent_opt_state = optimizer.init(latent_init)
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
 
-    # Define optimisation step:
-    def step(carry: tuple, iter_num: int):
-        # Get params and opt_state
-        latent, theta, latent_opt_state, theta_opt_state = carry
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
 
-        # E-step: Update particles
-        latent_score = Partial(model.score_latent_particles, theta=theta)
-        grads = svgd(
-            particles=latent, score=latent_score, kernel=MedianRBF()
-        )  # <- TODO: Make kernel a parameter.
-        latent_new, latent_new_opt_state = optimizer.update(
-            grads, latent_opt_state, latent
-        )
+    optimiser = cocob(alpha=0.0)
 
-        # M-step: Update parameters
-        theta_new, theta_new_opt_state = optimizer.update(
-            model.average_score_theta(latent, theta), theta_opt_state, theta
-        )
-
-        # Update the carry
-        carry = (latent_new, theta_new, latent_new_opt_state, theta_new_opt_state)
-
-        # Return the carry, and the new params
-        return carry, {"latent": latent, "theta": theta}
-
-    _, hist = lax.scan(
-        step,
-        (latent_init, theta_init, latent_opt_state, theta_opt_state),
-        jnp.arange(num_steps),
+    return svgd(
+        model=model,
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        latent_optimiser=optimiser,
+        theta_optimiser=optimiser,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
     )
-
-    return hist["latent"], hist["theta"]
 
 
 def adam_svgd(
     model: AbstractModel,
+    data: Dataset,
     latent_init: Float[Array, "N D"],
     theta_init: Float[Array, "Q"],
     num_steps: int,
-    theta_step_size=1e-5,
-    latent_step_size=1e-5,
-):
-    # Define coinEM optimiser:
-    theta_opt = ox.adam(learning_rate=theta_step_size)
-    latent_opt = ox.adam(learning_rate=latent_step_size)
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the Adam SVGD algorithm.
 
-    # Initialise optimiser states:
-    theta_opt_state = theta_opt.init(theta_init)
-    latent_opt_state = latent_opt.init(latent_init)
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
 
-    # Define optimisation step:
-    def step(carry: tuple, iter_num: int):
-        # Get params and opt_state
-        latent, theta, latent_opt_state, theta_opt_state = carry
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
 
-        # E-step: Update particles
-        latent_score = Partial(model.score_latent_particles, theta=theta)
-        grads = svgd(
-            particles=latent, score=latent_score, kernel=MedianRBF()
-        )  # <- TODO: Make kernel a parameter.
+    latent_optimiser = ox.adam(latent_step_size)
+    theta_optimiser = ox.adam(theta_step_size)
 
-        latent_updates, latent_new_opt_state = latent_opt.update(
-            grads, latent_opt_state, latent
-        )
-        latent_new = ox.apply_updates(latent, latent_updates)
-
-        # M-step: Update parameters
-        theta_updates, theta_new_opt_state = latent_opt.update(
-            model.average_score_theta(latent, theta), theta_opt_state, theta
-        )
-        theta_new = ox.apply_updates(theta, theta_updates)
-
-        # Update the carry
-        carry = (latent_new, theta_new, latent_new_opt_state, theta_new_opt_state)
-
-        # Return the carry, and the new params
-        return carry, {"latent": latent, "theta": theta}
-
-    _, hist = lax.scan(
-        step,
-        (latent_init, theta_init, latent_opt_state, theta_opt_state),
-        jnp.arange(num_steps),
+    return svgd(
+        model=model,
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        latent_optimiser=latent_optimiser,
+        theta_optimiser=theta_optimiser,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
     )
-
-    return hist["latent"], hist["theta"]
-
-
-def pgd(
-    model: AbstractModel,
-    latent_init: Float[Array, "N D"],
-    theta_init: Float[Array, "Q"],
-    num_steps: int,
-    step_size=1e-2,
-    key=jr.PRNGKey(42),
-):
-    h = step_size
-
-    def step(carry: tuple, iter_num: int):
-        # Get params and key
-        latent, theta, key = carry
-
-        # Split the PRNG key
-        key, subkey = jr.split(key)
-
-        # E-step: Update particles
-        latent_new = (
-            latent
-            + h * model.score_latent_particles(latent, theta)
-            + jnp.sqrt(2.0 * h) * jr.normal(subkey, shape=latent.shape)
-        )
-
-        # M-step: Update parameters
-        theta_new = theta + h * model.average_score_theta(latent, theta)
-
-        # Update the carry
-        carry = (latent_new, theta_new, key)
-
-        # Return the carry, and the new params
-        return carry, {"latent": latent, "theta": theta}
-
-    _, hist = lax.scan(step, (latent_init, theta_init, key), jnp.arange(num_steps))
-
-    return hist["latent"], hist["theta"]
 
 
 def soul(
     model: AbstractModel,
+    data: Dataset,
     latent_init: Float[Array, "N D"],
     theta_init: Float[Array, "Q"],
     num_steps: int,
-    step_size=1e-2,
-    key=jr.PRNGKey(42),
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
 ):
-    h = step_size
+    """Perform the SoulEM algorithm.
 
-    def step(carry: tuple, iter_num: int):
-        # Get params and key
-        latent, theta, key = carry
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
 
-        # Split the PRNG key
-        key, subkey = jr.split(key)
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
 
-        # E-step: Update particles via ULA chain
+    return expectation_maximisation(
+        expectation_step=SoulExpectationStep(model=model, step_size=latent_step_size),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.sgd(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
 
-        def body_fun(carry, particle_key):
-            particle, key = carry
 
-            key, subkey = jr.split(key)
+def pgd(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the Particle Gradient Descent algorithm.
 
-            new = (
-                particle
-                + h * model.score_latent(particle, theta)
-                + jnp.sqrt(2.0 * h) * jr.normal(subkey, shape=particle.shape)
-            )
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
 
-            return (new, key), new
-
-        _, latent_new = lax.scan(
-            body_fun, (latent[-1], subkey), jnp.arange(latent.shape[0])
-        )
-
-        # M-step: Update parameters
-        theta_new = theta + h * model.average_score_theta(latent, theta)
-
-        # Update the carry
-        carry = (latent_new, theta_new, key)
-
-        # Return the carry, and the new params
-        return carry, {"latent": latent, "theta": theta}
-
-    _, hist = lax.scan(step, (latent_init, theta_init, key), jnp.arange(num_steps))
-
-    return hist["latent"], hist["theta"]
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+    return expectation_maximisation(
+        expectation_step=ParticleGradientExpectationStep(
+            model=model, step_size=latent_step_size
+        ),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.sgd(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )

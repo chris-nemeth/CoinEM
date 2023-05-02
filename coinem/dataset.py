@@ -6,6 +6,9 @@ from simple_pytree import Pytree
 from dataclasses import dataclass
 from beartype import beartype
 
+from jax.random import KeyArray
+import jax.random as jr
+
 
 @beartype
 @jaxtyped
@@ -53,6 +56,27 @@ class Dataset(Pytree):
         return self.y.shape[1]
 
 
+def get_batch(train_data: Dataset, batch_size: int, key: KeyArray) -> Dataset:
+    """Batch the data into mini-batches. Sampling is done with replacement.
+
+    Args:
+        train_data (Dataset): The training dataset.
+        batch_size (int): The batch size.
+        key (KeyArray): The random key to use for the batch selection.
+
+    Returns
+    -------
+        Dataset: The batched dataset.
+    """
+    x, y, n = train_data.X, train_data.y, train_data.n
+
+    # Subsample mini-batch indices with replacement.
+    indices = jr.choice(key, n, (batch_size,), replace=True)
+
+    return Dataset(X=x[indices], y=y[indices])
+
+
 __all__ = [
     "Dataset",
+    "get_batch",
 ]

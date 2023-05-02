@@ -1,18 +1,14 @@
-from beartype import beartype
 from dataclasses import dataclass
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import Array, Float
 from typing import Tuple
 from simple_pytree import Pytree
 from abc import abstractmethod
 from jax import vmap, grad
 import jax.numpy as jnp
 
-
 from coinem.utils import ComputeDistances
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class AbstractKernel(Pytree):
     """Base class for kernels."""
@@ -32,8 +28,6 @@ class AbstractKernel(Pytree):
         raise NotImplementedError
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class RBF(AbstractKernel):
     """RBF kernel with static bandwidth selection.
@@ -65,8 +59,6 @@ class RBF(AbstractKernel):
         return K, dK  # Kxx, ∇x Kxx
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class MeanRBF(AbstractKernel):
     """RBF kernel with automatic bandwidth selection as the mean of the pairwise distances."""
@@ -97,8 +89,6 @@ class MeanRBF(AbstractKernel):
         return K, dK  # Kxx, ∇x Kxx
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class MedianRBF(AbstractKernel):
     """RBF kernel with automatic bandwidth selection as the median of the pairwise distances."""
@@ -129,8 +119,6 @@ class MedianRBF(AbstractKernel):
         return K, dK  # Kxx, ∇x Kxx
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class AutoKernel(AbstractKernel):
     """Auto diff / vmap kernel."""
@@ -188,8 +176,6 @@ class AutoKernel(AbstractKernel):
         return self.K(x), self.dK(x)
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class AutoRBF(AutoKernel):
     """Auto diff / vmap RBF kernel.
@@ -215,8 +201,6 @@ class AutoRBF(AutoKernel):
         return jnp.exp(-0.5 * jnp.sum((xi - yi) ** 2) / self.h**2).squeeze()
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class AutoMedianRBF(AutoKernel):
     """Auto diff / vmap RBF kernel with automatic bandwidth selection as the median of the pairwise distances."""

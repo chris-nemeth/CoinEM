@@ -1,16 +1,15 @@
-from beartype import beartype
 from dataclasses import dataclass
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import Array, Float
 from simple_pytree import Pytree, static_field
 from functools import partial
 import jax.numpy as jnp
+
+__all__ = ["ComputeDistances", "cum_mean"]
 
 """A field that is not initialized and not printed in repr and not a Pytree leaf."""
 static_hidden_field = partial(static_field, init=False, repr=False)
 
 
-# @jaxtyped
-# @beartype
 @dataclass
 class ComputeDistances(Pytree):
     """Compute distances between points in a batch.

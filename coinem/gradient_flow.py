@@ -5,12 +5,14 @@ import jax.numpy as jnp
 from coinem.kernels import AbstractKernel
 
 
-def svgd(
+def stein_grad(
     particles: Float[Array, "N D"],
     score: Callable[[Float[Array, "N D"]], Float[Array, "N 1"]],
     kernel: AbstractKernel,
 ) -> Float[Array, "N D"]:
     """
+    Computes the kernelised Stein gradient of the particles (Liu and Wang, 2016).
+
     Args:
         particles (Float[Array, "N D"]): The current particles.
         score (Callable[[Float[Array, "N D"]], Float[Array, "N 1"]]): The score function.
