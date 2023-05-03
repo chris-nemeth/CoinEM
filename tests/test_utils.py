@@ -1,4 +1,4 @@
-from coinem.utils import ComputeDistances, cum_mean
+from coinem.utils import ComputeDistances, cum_mean, procrustes
 
 import pytest
 import jax.numpy as jnp
@@ -58,3 +58,14 @@ def test_cum_mean():
 
     # Compare result with expected result using pytest
     assert jnp.allclose(cum_mean(x), expected_result)
+
+
+def test_procrustes():
+    A = jnp.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+    B = jnp.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+
+    import scipy.spatial as ss
+
+    expected_result = ss.procrustes(A, B)[2]
+
+    assert jnp.allclose(procrustes(A, B)[2], expected_result)
