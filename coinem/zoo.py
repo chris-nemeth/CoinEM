@@ -69,6 +69,7 @@ def coin_svgd(
     num_steps: int,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    alpha: float = 0.0,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the CoinEM algorithm.
 
@@ -85,7 +86,7 @@ def coin_svgd(
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
     """
 
-    optimiser = cocob(alpha=0.0)
+    optimiser = cocob(alpha=alpha)
 
     return svgd(
         model=model,
