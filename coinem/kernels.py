@@ -74,11 +74,16 @@ class MeanRBF(AbstractKernel):
         Returns:
             Tuple[Float[Array, "N N"], Float[Array, "N N D"]]: Kernel Gram matrix.
         """
+        jitter = 1e-18
+
         distances = ComputeDistances(x)
-        h = jnp.sqrt(
-            0.5
-            * jnp.mean(distances.square_dists)
-            / jnp.log(distances.square_dists.shape[0] + 1.0)
+        h = (
+            jnp.sqrt(
+                0.5
+                * jnp.mean(distances.square_dists)
+                / jnp.log(distances.square_dists.shape[0] + 1.0)
+            )
+            + jitter
         )
 
         K = jnp.exp(-0.5 * distances.square_dists / h**2)  # [N N]
@@ -104,11 +109,16 @@ class MedianRBF(AbstractKernel):
         Returns:
             Tuple[Float[Array, "N N"], Float[Array, "N N D"]]: Kernel Gram matrix.
         """
+        jitter = 1e-18
+
         distances = ComputeDistances(x)
-        h = jnp.sqrt(
-            0.5
-            * jnp.median(distances.square_dists)
-            / jnp.log(distances.square_dists.shape[0] + 1.0)
+        h = (
+            jnp.sqrt(
+                0.5
+                * jnp.median(distances.square_dists)
+                / jnp.log(distances.square_dists.shape[0] + 1.0)
+            )
+            + jitter
         )
 
         K = jnp.exp(-0.5 * distances.square_dists / h**2)  # [N N]
