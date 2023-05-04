@@ -53,9 +53,9 @@ class MaximisationStep(AbstractMaximisationStep):
         theta_opt_state = maximisation_state.optimiser_state
 
         # Find negative average score of theta, since we are maximising, but optimisers minimise.
-        negative_average_score_theta = -self.model.average_score_theta(
-            latent, theta, data
-        )
+        average_score_theta = self.model.average_score_theta(latent, theta, data)
+
+        negative_average_score_theta = jtu.tree_map(lambda x: -x, average_score_theta)
 
         # Find update rule for theta
         theta_updates, theta_new_opt_state = self.optimiser.update(

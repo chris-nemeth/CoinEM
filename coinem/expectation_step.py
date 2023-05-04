@@ -16,6 +16,7 @@ from coinem.gradient_flow import stein_grad
 from coinem.kernels import AbstractKernel, MedianRBF
 
 from jax import lax
+from jax import flatten_util
 import jax.tree_util as jtu
 
 import optax as ox
@@ -71,9 +72,10 @@ class SteinExpectationStep(AbstractExpectationStep):
         latent_score = jtu.Partial(
             self.model.score_latent_particles, theta=theta, data=data
         )
-        negative_latent_grad = -stein_grad(
+        latent_grad = stein_grad(
             particles=latent, score=latent_score, kernel=self.kernel
         )
+        negative_latent_grad = jtu.tree_map(lambda x: -x, latent_grad)
 
         # Find update rule for theta
         latent_updates, latent_new_opt_state = self.optimiser.update(
@@ -114,11 +116,20 @@ class ParticleGradientExpectationStep(AbstractExpectationStep):
         key, subkey = jr.split(key)
 
         # Update latent particles
-        latent_new = (
-            latent
-            + self.step_size * self.model.score_latent_particles(latent, theta, data)
-            + jnp.sqrt(2.0 * self.step_size) * jr.normal(subkey, shape=latent.shape)
+        score_latent_particles = self.model.score_latent_particles(latent, theta, data)
+        score_adjusted_latent = jtu.tree_map(
+            lambda p, s: p + self.step_size * s, latent, score_latent_particles
         )
+
+        ravel_score_adjusted_latent, unravel = flatten_util.ravel_pytree(
+            score_adjusted_latent
+        )
+
+        ravel_latent_new = ravel_score_adjusted_latent + jnp.sqrt(
+            2.0 * self.step_size
+        ) * jr.normal(subkey, shape=ravel_score_adjusted_latent.shape)
+
+        latent_new = unravel(ravel_latent_new)
 
         # Update expectation state
         expectation_state_new = ExpectationState(optimiser_state=None, key=key)
@@ -155,17 +166,34 @@ class SoulExpectationStep(AbstractExpectationStep):
 
             key, subkey = jr.split(key)
 
-            new = (
-                particle
-                + self.step_size * self.model.score_latent(particle, theta, data)
-                + jnp.sqrt(2.0 * self.step_size)
-                * jr.normal(subkey, shape=particle.shape)
+            score_latent = self.model.score_latent(particle, theta, data)
+            score_adjusted_latent = jtu.tree_map(
+                lambda p, s: p + self.step_size * s, particle, score_latent
             )
+
+            ravel_score_adjusted_latent, unravel = flatten_util.ravel_pytree(
+                score_adjusted_latent
+            )
+
+            ravel_latent_new = ravel_score_adjusted_latent + jnp.sqrt(
+                2.0 * self.step_size
+            ) * jr.normal(subkey, shape=ravel_score_adjusted_latent.shape)
+
+            new = unravel(ravel_latent_new)
+
+            # new = (
+            #     particle
+            #     + self.step_size * self.model.score_latent(particle, theta, data)
+            #     + jnp.sqrt(2.0 * self.step_size)
+            #     * jr.normal(subkey, shape=particle.shape)
+            # )
 
             return (new, key), new
 
         _, latent_new = lax.scan(
-            body_fun, (latent[-1], subkey), jnp.arange(latent.shape[0])
+            body_fun,
+            (jtu.tree_map(lambda l: l[-1], latent), subkey),
+            jnp.arange(jtu.tree_leaves(latent)[0].shape[0]),
         )
 
         # Update expectation state

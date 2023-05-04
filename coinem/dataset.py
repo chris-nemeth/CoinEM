@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from jaxtyping import Array, Float, jaxtyped
+from jaxtyping import Array, Float
 from typing import Optional
 from simple_pytree import Pytree
 from dataclasses import dataclass
-from beartype import beartype
 
 from jax.random import KeyArray
 import jax.random as jr
 
 
-@beartype
-@jaxtyped
 @dataclass
 class Dataset(Pytree):
     """Base class for datasets.
