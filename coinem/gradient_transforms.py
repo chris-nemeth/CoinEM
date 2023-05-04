@@ -90,7 +90,7 @@ def cocob(alpha: float = 0.0) -> GradientTransformation:
         lt_minus_1 = state.Lipschitz
 
         # Gradient
-        ct = -gradient  #  Minimisation convention
+        ct = jtu.tree_map(lambda x: -x, gradient)  #  Minimisation convention
 
         # Absolute |ct|
         abs_ct = jtu.tree_map(jnp.abs, ct)
