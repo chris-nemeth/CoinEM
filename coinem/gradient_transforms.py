@@ -43,7 +43,7 @@ class CocobState(OptimiserState):
     Lipschitz: PyTree
 
 
-def cocob(alpha: float = 0.0) -> GradientTransformation:
+def cocob(alpha: float = 0.0, eps: float = 1e-8) -> GradientTransformation:
     """
     The COntinuos COin Betting (COCOB) optimizer with adaptive learning of the Lipschitz constant.
 
@@ -51,6 +51,7 @@ def cocob(alpha: float = 0.0) -> GradientTransformation:
 
     Args:
       alpha (float): Smoothing parameter for the updates. Defaults to 0.0 <-> No smoothing.
+      eps: A small constant applied to denominator outside of the square root to avoid dividing by zero when rescaling.
 
     Returns:
       A `GradientTransformation` object.
@@ -67,7 +68,8 @@ def cocob(alpha: float = 0.0) -> GradientTransformation:
         """
 
         zeros = jtu.tree_map(jnp.zeros_like, params)
-        return CocobState(params, zeros, zeros, zeros, zeros)
+        jitter = jtu.tree_map(lambda x: eps * jnp.ones_like(x), params)
+        return CocobState(params, zeros, zeros, zeros, jitter)
 
     def update_fn(
         gradient: PyTree, state: CocobState, params: PyTree
