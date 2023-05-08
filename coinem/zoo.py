@@ -145,6 +145,50 @@ def adam_svgd(
     )
 
 
+def ada_svgd(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the Adam SVGD algorithm.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+
+    latent_optimiser = ox.adagrad(latent_step_size)
+    theta_optimiser = ox.adagrad(theta_step_size)
+
+    return svgd(
+        model=model,
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        latent_optimiser=latent_optimiser,
+        theta_optimiser=theta_optimiser,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
 def soul(
     model: AbstractModel,
     data: Dataset,
