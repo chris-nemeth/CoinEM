@@ -9,9 +9,8 @@ from coinem.gradient_transforms import GradientTransformation, OptimiserState
 
 import jax.tree_util as jtu
 
-
-class MaximisationState(NamedTuple):
-    optimiser_state: OptimiserState
+"""State for the maximisation step. """
+AbstractMaximisationState = NamedTuple
 
 
 @dataclass
@@ -19,36 +18,41 @@ class AbstractMaximisationStep(Pytree):
     """The M-step of the EM algorithm."""
 
     model: AbstractModel
-    optimiser: GradientTransformation
 
-    def init(self, params, key) -> MaximisationState:
-        return MaximisationState(optimiser_state=self.optimiser.init(params))
+    def init(self, theta, key) -> AbstractMaximisationState:
+        raise NotImplementedError
 
     @abstractmethod
     def update(
         self,
-        state: MaximisationState,
+        state: AbstractMaximisationState,
         latent: Float[Array, "N D"],
         theta: Float[Array, "Q"],
         data: Dataset,
-    ) -> Tuple[Float[Array, "Q"], MaximisationState]:
+    ) -> Tuple[Float[Array, "Q"], AbstractMaximisationState]:
         raise NotImplementedError
+
+
+class GradientMaximisationState(AbstractMaximisationState):
+    optimiser_state: OptimiserState
 
 
 @dataclass
 class MaximisationStep(AbstractMaximisationStep):
     """The M-step of the EM algorithm."""
 
-    model: AbstractModel
     optimiser: GradientTransformation
+
+    def init(self, params, key) -> GradientMaximisationState:
+        return GradientMaximisationState(optimiser_state=self.optimiser.init(params))
 
     def update(
         self,
-        maximisation_state: MaximisationState,
+        maximisation_state: GradientMaximisationState,
         latent: Float[Array, "N D"],
         theta: Float[Array, "Q"],
         data: Dataset,
-    ) -> Tuple[Float[Array, "Q"], MaximisationState]:
+    ) -> Tuple[Float[Array, "Q"], GradientMaximisationState]:
         # Unpack maximisation state
         theta_opt_state = maximisation_state.optimiser_state
 
@@ -66,6 +70,32 @@ class MaximisationStep(AbstractMaximisationStep):
         theta_new = jtu.tree_map(lambda p, u: p + u, theta, theta_updates)
 
         # Update maximisation state
-        maximisation_state_new = MaximisationState(optimiser_state=theta_new_opt_state)
+        maximisation_state_new = GradientMaximisationState(
+            optimiser_state=theta_new_opt_state
+        )
 
         return theta_new, maximisation_state_new
+
+
+class MarginalMaximisationState(AbstractMaximisationState):
+    pass
+
+
+@dataclass
+class MarginalStep(AbstractMaximisationStep):
+    """The M-step of the EM algorithm, when the optimal theta is a function of the latent particles only."""
+
+    def init(self, params, key) -> MarginalMaximisationState:
+        return MarginalMaximisationState()
+
+    def update(
+        self,
+        maximisation_state: MarginalMaximisationState,
+        latent: Float[Array, "N D"],
+        theta: Float[Array, "Q"],
+        data: Dataset,
+    ) -> Tuple[Float[Array, "Q"], MarginalMaximisationState]:
+        # Find update rule for theta as a function of the particle cloud only
+        theta_new = self.model.optimal_theta(latent)
+
+        return theta_new, maximisation_state

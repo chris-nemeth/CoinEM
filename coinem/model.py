@@ -123,6 +123,20 @@ class AbstractModel(Pytree):
 
         return jtu.tree_map(jtu.Partial(jnp.mean, axis=0), scores)
 
+    def optimal_theta(
+        self, latent_particles: PyTree[Float[Array, "N D *"]]
+    ) -> PyTree[Float[Array, "Q *"]]:
+        """
+        In certain models, the Mstep can be computed analytically. This function returns the optimal theta given the latent particles.
+
+        Args:
+            latent_particles (PyTree[Float[Array, "N D *"]]): latent_particles variables with first two axes of shape (N, D).
+
+        Returns:
+            PyTree[Float[Array, "Q *"]]: The optimal theta.
+        """
+        raise NotImplementedError
+
     # def average_hessian_theta(
     #     self,
     #     latent_particles: Float[Array, "N D"],
