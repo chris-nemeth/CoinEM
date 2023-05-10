@@ -218,9 +218,8 @@ class Wisconsin(UCI):
         # Remove datapoints with missing attributes and change dtype to float:
         dataset = dataset[~(dataset == "?").any(axis=1), :].astype(float)
 
-        # Extract features and labels, and normalize features:
-        features = np.array(dataset[:, 1:10] - dataset[:, 1:10].mean(0))
-        features = features / features.std(0)
+        # Extract features and labels:
+        features = np.array(dataset[:, 1:10])
         labels = np.array([(dataset[:, 10] - 2) / 2]).transpose()
 
         self.X = jnp.array(features)
@@ -229,3 +228,42 @@ class Wisconsin(UCI):
     @property
     def name(self) -> str:
         return "Wisconsin"
+
+
+@dataclass
+class Banknote(UCI):
+    def __post_init__(self):
+        path = os.path.join(dir, "data_banknote_authentication.txt")
+        dataset = np.loadtxt(path, delimiter=",")
+        self.X = jnp.array(dataset[:, :-1])
+        self.y = jnp.array(dataset[:, -1])
+
+    @property
+    def name(self) -> str:
+        return "Banknote"
+
+
+@dataclass
+class Cleveland(UCI):
+    def __post_init__(self):
+        path = os.path.join(dir, "heart_cleveland_upload.csv")
+        dataset = np.loadtxt(path, delimiter=",", skiprows=1)
+        self.X = jnp.array(dataset[:, :-1])
+        self.y = jnp.array(dataset[:, -1])
+
+    @property
+    def name(self) -> str:
+        return "Cleveland"
+
+
+@dataclass
+class Haberman(UCI):
+    def __post_init__(self):
+        path = os.path.join(dir, "haberman.data")
+        dataset = np.loadtxt(path, delimiter=",")
+        self.X = jnp.array(dataset[:, :-1])
+        self.y = jnp.array(dataset[:, -1]) - 1.0
+
+    @property
+    def name(self) -> str:
+        return "Haberman"

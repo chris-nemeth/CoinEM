@@ -136,18 +136,20 @@ if __name__ == "__main__":
 
     from time import perf_counter
 
-    datasets = [
-        Boston(),
-        Concrete(),
-        Energy(),
-        Kin8nm(),
-    ]  # , Naval(), Power(), Protein(), Wine(), Yacht()]
+    # datasets = [
+    #     Boston(),
+    #     Concrete(),
+    #     Energy(),
+    #     Kin8nm(),
+    # ]
+
+    datasets = [Naval(), Power(), Protein(), Wine(), Yacht()]
 
     # Number of steps, particles and replicates
     num_steps = 1000
     num_particles = 20
     num_replicates = 10
-    step_sizes = jnp.logspace(-10, 2, num=30)
+    step_sizes = jnp.logspace(-9, 1, num=30)
 
     for data in datasets:
         # Output
@@ -191,6 +193,13 @@ if __name__ == "__main__":
             # Split dataset
             train, test = data.preprocess(test_size=0.1, random_state=seed)
 
+            # Batch size
+            if train.n < 500:
+                batch_size = -1
+
+            else:
+                batch_size = 100
+
             # Initialise the model parameters
             key, subkey = jr.split(key)
             latent_init, theta_init = model.init_params(num_particles, key=key)
@@ -198,7 +207,13 @@ if __name__ == "__main__":
             # Run coinem that is learning rate free
             coin_start = perf_counter()
             latent_coin, theta_coin = coin_svgd(
-                model, train, latent_init, theta_init, num_steps, alpha=100.0
+                model,
+                train,
+                latent_init,
+                theta_init,
+                num_steps,
+                alpha=100.0,
+                batch_size=batch_size,
             )
             coin_end = perf_counter()
 
@@ -222,6 +237,7 @@ if __name__ == "__main__":
                     num_steps,
                     theta_step_size=step_size,
                     latent_step_size=step_size,
+                    batch_size=batch_size,
                 )
                 adam_end = perf_counter()
 
@@ -234,6 +250,7 @@ if __name__ == "__main__":
                     num_steps,
                     theta_step_size=step_size,
                     latent_step_size=step_size,
+                    batch_size=batch_size,
                 )
                 adam_end = perf_counter()
 
@@ -246,6 +263,7 @@ if __name__ == "__main__":
                     num_steps,
                     theta_step_size=step_size,
                     latent_step_size=step_size,
+                    batch_size=batch_size,
                     key=key_pgd,
                 )
                 pgd_end = perf_counter()
@@ -259,6 +277,7 @@ if __name__ == "__main__":
                     num_steps,
                     theta_step_size=step_size,
                     latent_step_size=step_size,
+                    batch_size=batch_size,
                     key=key_soul,
                 )
                 soul_end = perf_counter()

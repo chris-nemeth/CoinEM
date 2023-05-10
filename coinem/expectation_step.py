@@ -69,9 +69,10 @@ class SteinExpectationStep(AbstractExpectationStep):
         latent_opt_state = expectation_state.optimiser_state
 
         # Find negative Stein gradient score of the latent particles (negative, since we are maximising, but optimisers minimise!)
-        latent_score = jtu.Partial(
-            self.model.score_latent_particles, theta=theta, data=data
+        latent_score = lambda x: self.model.score_latent_particles(
+            x, theta=theta, data=data
         )
+
         latent_grad = stein_grad(
             particles=latent, score=latent_score, kernel=self.kernel
         )
