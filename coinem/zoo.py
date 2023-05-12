@@ -189,6 +189,50 @@ def ada_svgd(
     )
 
 
+def rms_svgd(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the RMSprop SVGD algorithm.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+
+    latent_optimiser = ox.rmsprop(latent_step_size)
+    theta_optimiser = ox.rmsprop(theta_step_size)
+
+    return svgd(
+        model=model,
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        latent_optimiser=latent_optimiser,
+        theta_optimiser=theta_optimiser,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
 def soul(
     model: AbstractModel,
     data: Dataset,
@@ -264,6 +308,261 @@ def pgd(
         ),
         maximisation_step=MaximisationStep(
             model=model, optimiser=ox.sgd(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
+def rms_soul(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+):
+    """Perform the SoulEM algorithm with adagrad on the theta updates.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+
+    return expectation_maximisation(
+        expectation_step=SoulExpectationStep(model=model, step_size=latent_step_size),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.rmsprop(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
+def ada_soul(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+):
+    """Perform the SoulEM algorithm with adagrad on the theta updates.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+
+    return expectation_maximisation(
+        expectation_step=SoulExpectationStep(model=model, step_size=latent_step_size),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.adagrad(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
+def adam_soul(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+):
+    """Perform the SoulEM algorithm with adam on the theta updates.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+
+    return expectation_maximisation(
+        expectation_step=SoulExpectationStep(model=model, step_size=latent_step_size),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.adam(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
+def ada_pgd(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the Particle Gradient Descent algorithm with adagrad on the theta updates.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+    return expectation_maximisation(
+        expectation_step=ParticleGradientExpectationStep(
+            model=model, step_size=latent_step_size
+        ),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.adagrad(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
+def adam_pgd(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the Particle Gradient Descent algorithm with adam on the theta updates.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+    return expectation_maximisation(
+        expectation_step=ParticleGradientExpectationStep(
+            model=model, step_size=latent_step_size
+        ),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.adam(theta_step_size)
+        ),
+        data=data,
+        latent_init=latent_init,
+        theta_init=theta_init,
+        num_steps=num_steps,
+        batch_size=batch_size,
+        key=key,
+    )
+
+
+def rms_pgd(
+    model: AbstractModel,
+    data: Dataset,
+    latent_init: Float[Array, "N D"],
+    theta_init: Float[Array, "Q"],
+    num_steps: int,
+    latent_step_size: float = 1e-2,
+    theta_step_size: float = 1e-2,
+    batch_size: int = -1,
+    key: KeyArray = jr.PRNGKey(42),
+) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
+    """Perform the Particle Gradient Descent algorithm with RMSprop on the theta updates.
+
+    Args:
+        model (AbstractModel): The model.
+        data (Dataset): The dataset.
+        latent_init (Float[Array, "N D"]): The initial latent particles.
+        theta_init (Float[Array, "Q"]): The initial parameters.
+        num_steps (int): The number of steps to perform, K.
+        latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+        theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+        batch_size (int, optional): The batch size. Defaults to -1.
+        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+    Returns:
+        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+    """
+    return expectation_maximisation(
+        expectation_step=ParticleGradientExpectationStep(
+            model=model, step_size=latent_step_size
+        ),
+        maximisation_step=MaximisationStep(
+            model=model, optimiser=ox.rmsprop(theta_step_size)
         ),
         data=data,
         latent_init=latent_init,

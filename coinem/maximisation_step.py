@@ -1,5 +1,5 @@
 from jaxtyping import Array, Float
-from simple_pytree import Pytree
+from simple_pytree import Pytree, static_field
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import NamedTuple, Tuple
@@ -17,7 +17,7 @@ AbstractMaximisationState = NamedTuple
 class AbstractMaximisationStep(Pytree):
     """The M-step of the EM algorithm."""
 
-    model: AbstractModel
+    model: AbstractModel = static_field()
 
     def init(self, theta, key) -> AbstractMaximisationState:
         raise NotImplementedError
@@ -41,7 +41,7 @@ class GradientMaximisationState(AbstractMaximisationState):
 class MaximisationStep(AbstractMaximisationStep):
     """The M-step of the EM algorithm."""
 
-    optimiser: GradientTransformation
+    optimiser: GradientTransformation = static_field()
 
     def init(self, params, key) -> GradientMaximisationState:
         return GradientMaximisationState(optimiser_state=self.optimiser.init(params))
