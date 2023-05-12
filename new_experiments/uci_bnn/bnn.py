@@ -119,7 +119,17 @@ class BNN(AbstractModel):
 
 
 if __name__ == "__main__":
-    from coinem.zoo import coin_svgd, pgd, soul, adam_svgd, ada_svgd
+    from coinem.zoo import (
+        coin_svgd,
+        pgd,
+        soul,
+        adam_svgd,
+        ada_svgd,
+        ada_pgd,
+        adam_pgd,
+        ada_soul,
+        adam_soul,
+    )
     from coinem.uci import (
         Boston,
         Concrete,
@@ -136,14 +146,14 @@ if __name__ == "__main__":
 
     from time import perf_counter
 
-    # datasets = [
-    #     Boston(),
-    #     Concrete(),
-    #     Energy(),
-    #     Kin8nm(),
-    # ]
+    datasets = [
+        Boston(),
+        Concrete(),
+        Energy(),
+        Kin8nm(),
+    ]
 
-    datasets = [Naval(), Power(), Protein(), Wine(), Yacht()]
+    # datasets = [Naval(), Power(), Protein(), Wine(), Yacht()]
 
     # Number of steps, particles and replicates
     num_steps = 1000
@@ -165,6 +175,10 @@ if __name__ == "__main__":
         results["runtime"]["ada"] = []
         results["runtime"]["pgd"] = []
         results["runtime"]["soul"] = []
+        results["runtime"]["adam_pgd"] = []
+        results["runtime"]["ada_pgd"] = []
+        results["runtime"]["adam_soul"] = []
+        results["runtime"]["ada_soul"] = []
 
         # Create empty lists for each algorithm
         results["rmse"] = {}
@@ -173,6 +187,10 @@ if __name__ == "__main__":
         results["rmse"]["ada"] = []
         results["rmse"]["pgd"] = []
         results["rmse"]["soul"] = []
+        results["rmse"]["adam_pgd"] = []
+        results["rmse"]["ada_pgd"] = []
+        results["rmse"]["adam_soul"] = []
+        results["rmse"]["ada_soul"] = []
 
         # Model
         model = BNN(num_datapoints=data.n, feature_dim=data.in_dim, num_hidden=50)
@@ -282,17 +300,81 @@ if __name__ == "__main__":
                 )
                 soul_end = perf_counter()
 
+                adam_pgd_start = perf_counter()
+                X_adam_pgd, th_adam_pgd = adam_pgd(
+                    model,
+                    train,
+                    latent_init,
+                    theta_init,
+                    num_steps,
+                    theta_step_size=step_size,
+                    latent_step_size=step_size,
+                    batch_size=batch_size,
+                    key=key_pgd,
+                )
+                adam_pgd_end = perf_counter()
+
+                ada_pgd_start = perf_counter()
+                X_ada_pgd, th_ada_pgd = ada_pgd(
+                    model,
+                    train,
+                    latent_init,
+                    theta_init,
+                    num_steps,
+                    theta_step_size=step_size,
+                    latent_step_size=step_size,
+                    batch_size=batch_size,
+                    key=key_pgd,
+                )
+                ada_pgd_end = perf_counter()
+
+                adam_soul_start = perf_counter()
+                X_adam_soul, th_adam_soul = adam_soul(
+                    model,
+                    train,
+                    latent_init,
+                    theta_init,
+                    num_steps,
+                    theta_step_size=step_size,
+                    latent_step_size=step_size,
+                    batch_size=batch_size,
+                    key=key_soul,
+                )
+                adam_soul_end = perf_counter()
+
+                ada_soul_start = perf_counter()
+                X_ada_soul, th_ada_soul = ada_soul(
+                    model,
+                    train,
+                    latent_init,
+                    theta_init,
+                    num_steps,
+                    theta_step_size=step_size,
+                    latent_step_size=step_size,
+                    batch_size=batch_size,
+                    key=key_soul,
+                )
+                ada_soul_end = perf_counter()
+
                 # Store runtime
                 results["runtime"]["adam"].append(adam_end - adam_start)
                 results["runtime"]["ada"].append(adam_end - adam_start)
                 results["runtime"]["pgd"].append(pgd_end - pgd_start)
                 results["runtime"]["soul"].append(soul_end - soul_start)
+                results["runtime"]["adam_pgd"].append(adam_pgd_end - adam_pgd_start)
+                results["runtime"]["ada_pgd"].append(ada_pgd_end - ada_pgd_start)
+                results["runtime"]["adam_soul"].append(adam_soul_end - adam_soul_start)
+                results["runtime"]["ada_soul"].append(ada_soul_end - ada_soul_start)
 
                 # Evaluate performance
                 results["rmse"]["adam"].append(rmse_trace(latent_adam, test))
                 results["rmse"]["ada"].append(rmse_trace(latent_ada, test))
                 results["rmse"]["pgd"].append(rmse_trace(X_pgd, test))
                 results["rmse"]["soul"].append(rmse_trace(X_soul, test))
+                results["rmse"]["adam_pgd"].append(rmse_trace(X_adam_pgd, test))
+                results["rmse"]["ada_pgd"].append(rmse_trace(X_ada_pgd, test))
+                results["rmse"]["adam_soul"].append(rmse_trace(X_adam_soul, test))
+                results["rmse"]["ada_soul"].append(rmse_trace(X_ada_soul, test))
 
         with open(f"results/{data.name}.pkl", "wb") as f:
             pickle.dump(results, f)
