@@ -3,11 +3,13 @@ import jax.random as jr
 from jax.random import KeyArray
 from jax import lax
 from jaxtyping import Array, Float
-from typing import Tuple
+from typing import Tuple, Dict, Callable
 
 from coinem.expectation_step import AbstractExpectationStep
 from coinem.maximisation_step import AbstractMaximisationStep
 from coinem.dataset import Dataset, get_batch
+
+import jax.tree_util as jtu
 
 
 def expectation_maximisation(
@@ -19,6 +21,9 @@ def expectation_maximisation(
     num_steps: int,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """
     Performs the expectation-maximisation algorithm.
@@ -34,6 +39,7 @@ def expectation_maximisation(
         num_steps (int): The number of steps to perform, K.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to {}.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -87,13 +93,21 @@ def expectation_maximisation(
             key,
         )
 
+        if metrics is not None:
+            return carry, jtu.tree_map(
+                lambda metric: metric(latent_new, theta_new), metrics
+            )
+
         # Return the carry, and the new params
         return carry, {"latent": latent, "theta": theta}
 
-    _, hist = lax.scan(
+    (latent_last, theta_last, *_), hist = lax.scan(
         step,
         (latent_init, theta_init, expectation_state, maximisation_state, key),
         jnp.arange(num_steps),
     )
+
+    if metrics is not None:
+        return latent_last, theta_last, hist
 
     return hist["latent"], hist["theta"]

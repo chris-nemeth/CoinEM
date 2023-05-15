@@ -4,7 +4,7 @@ import jax.random as jr
 
 from jax.random import KeyArray
 from jaxtyping import Array, Float
-from typing import Tuple
+from typing import Tuple, Callable, Dict
 
 from coinem.expectation_maximisation import expectation_maximisation
 from coinem.model import AbstractModel
@@ -30,6 +30,9 @@ def svgd(
     num_steps: int,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """
     Perform the Stein variational gradient descent EM algorithm.
@@ -44,6 +47,7 @@ def svgd(
         num_steps (int): The number of steps to perform, K.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to {}.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -58,6 +62,7 @@ def svgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -70,6 +75,9 @@ def coin_svgd(
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
     alpha: float = 0.0,
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the CoinEM algorithm.
 
@@ -98,6 +106,7 @@ def coin_svgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -111,6 +120,9 @@ def adam_svgd(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the Adam SVGD algorithm.
 
@@ -124,6 +136,7 @@ def adam_svgd(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -142,6 +155,7 @@ def adam_svgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -155,6 +169,9 @@ def ada_svgd(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the Adam SVGD algorithm.
 
@@ -168,6 +185,7 @@ def ada_svgd(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -186,6 +204,7 @@ def ada_svgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -199,6 +218,9 @@ def rms_svgd(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the RMSprop SVGD algorithm.
 
@@ -212,6 +234,7 @@ def rms_svgd(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -230,6 +253,7 @@ def rms_svgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -243,6 +267,9 @@ def soul(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ):
     """Perform the SoulEM algorithm.
 
@@ -256,6 +283,7 @@ def soul(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -272,6 +300,7 @@ def soul(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -285,6 +314,9 @@ def pgd(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the Particle Gradient Descent algorithm.
 
@@ -298,6 +330,7 @@ def pgd(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -315,6 +348,7 @@ def pgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -328,6 +362,9 @@ def rms_soul(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ):
     """Perform the SoulEM algorithm with adagrad on the theta updates.
 
@@ -341,6 +378,7 @@ def rms_soul(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -357,6 +395,7 @@ def rms_soul(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -370,6 +409,9 @@ def ada_soul(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ):
     """Perform the SoulEM algorithm with adagrad on the theta updates.
 
@@ -383,6 +425,7 @@ def ada_soul(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -399,6 +442,7 @@ def ada_soul(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -412,6 +456,9 @@ def adam_soul(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ):
     """Perform the SoulEM algorithm with adam on the theta updates.
 
@@ -425,6 +472,7 @@ def adam_soul(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -441,6 +489,7 @@ def adam_soul(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -454,6 +503,9 @@ def ada_pgd(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the Particle Gradient Descent algorithm with adagrad on the theta updates.
 
@@ -467,6 +519,7 @@ def ada_pgd(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -484,6 +537,7 @@ def ada_pgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -497,6 +551,9 @@ def adam_pgd(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the Particle Gradient Descent algorithm with adam on the theta updates.
 
@@ -510,6 +567,7 @@ def adam_pgd(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -527,6 +585,7 @@ def adam_pgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
 
 
@@ -540,6 +599,9 @@ def rms_pgd(
     theta_step_size: float = 1e-2,
     batch_size: int = -1,
     key: KeyArray = jr.PRNGKey(42),
+    metrics: Dict[
+        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
+    ] = None,
 ) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
     """Perform the Particle Gradient Descent algorithm with RMSprop on the theta updates.
 
@@ -553,6 +615,7 @@ def rms_pgd(
         theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
         batch_size (int, optional): The batch size. Defaults to -1.
         key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+        metrics (Dict[str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]], optional): The metrics to compute. Defaults to None.
 
     Returns:
         Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
@@ -570,4 +633,5 @@ def rms_pgd(
         num_steps=num_steps,
         batch_size=batch_size,
         key=key,
+        metrics=metrics,
     )
