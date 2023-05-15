@@ -202,6 +202,7 @@ if __name__ == "__main__":
     from coinem.expectation_step import (
         ParticleGradientExpectationStep,
         SoulExpectationStep,
+        SteinExpectationStep,
     )
 
     import pickle
@@ -216,16 +217,19 @@ if __name__ == "__main__":
     results["runtime"] = {}
     results["runtime"]["pgd"] = []
     results["runtime"]["soul"] = []
+    results["runtime"]["svgd"] = []
 
     # Store error
     results["error"] = {}
     results["error"]["pgd"] = []
     results["error"]["soul"] = []
+    results["error"]["svgd"] = []
 
     # Store log predictive density
     results["lppd"] = {}
     results["lppd"]["pgd"] = []
     results["lppd"]["soul"] = []
+    results["lppd"]["svgd"] = []
 
     for seed in range(num_replicates):
         key = jr.PRNGKey(seed)
@@ -266,8 +270,8 @@ if __name__ == "__main__":
         theta_init = {"alpha": alpha, "beta": beta}
         latent_init = {"w": w_init, "v": v_init}
 
-        Dw = w_init.shape[-1]
-        Dv = v_init.shape[-1]
+        Dw = 40 * (28**2)
+        Dv = 2 * 40
 
         from typing import Tuple
         from jaxtyping import Float, Array
@@ -400,6 +404,53 @@ if __name__ == "__main__":
                 key=key,
             )
 
+        from coinem.kernels import AutoRBF
+
+        def heuristic_svgd(
+            model: AbstractModel,
+            data: Dataset,
+            latent_init: Float[Array, "N D"],
+            theta_init: Float[Array, "Q"],
+            num_steps: int,
+            latent_step_size: float = 1e-2,
+            theta_step_size: float = 1e-2,
+            batch_size: int = -1,
+            key: KeyArray = jr.PRNGKey(42),
+        ):
+            """Perform the SoulEM algorithm.
+
+            Args:
+                model (AbstractModel): The model.
+                data (Dataset): The dataset.
+                latent_init (Float[Array, "N D"]): The initial latent particles.
+                theta_init (Float[Array, "Q"]): The initial parameters.
+                num_steps (int): The number of steps to perform, K.
+                latent_step_size (float, optional): The latent step size. Defaults to 1e-2.
+                theta_step_size (float, optional): The parameter step size. Defaults to 1e-2.
+                batch_size (int, optional): The batch size. Defaults to -1.
+                key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
+
+            Returns:
+                Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
+            """
+
+            return expectation_maximisation(
+                expectation_step=SteinExpectationStep(
+                    model=model,
+                    optimiser=ox.adagrad(latent_step_size),
+                    kernel=AutoRBF(),
+                ),
+                maximisation_step=HeuristicMaximisationState(
+                    model=model, optimiser=ox.adagrad(theta_step_size)
+                ),
+                data=data,
+                latent_init=latent_init,
+                theta_init=theta_init,
+                num_steps=num_steps,
+                batch_size=batch_size,
+                key=key,
+            )
+
         for step_size in step_sizes:
             # Split keys for stochastic algorithms
             key_pgd, key_soul = jr.split(key)
@@ -441,6 +492,24 @@ if __name__ == "__main__":
             results["runtime"]["soul"].append(soul_end - soul_start)
             results["error"]["soul"].append(error(latent_soul))
             results["lppd"]["soul"].append(lppd(latent_soul))
+
+            # SVGD:
+            svgd_start = perf_counter()
+            latent_svgd, theta_svgd = heuristic_svgd(
+                model,
+                train,
+                latent_init,
+                theta_init,
+                num_steps,
+                theta_step_size=step_size,
+                latent_step_size=step_size,
+                key=key_soul,
+            )
+            svgd_end = perf_counter()
+
+            results["runtime"]["svgd"].append(svgd_end - svgd_start)
+            results["error"]["svgd"].append(error(latent_svgd))
+            results["lppd"]["svgd"].append(lppd(latent_svgd))
 
     with open(f"results/heuristics.pkl", "wb") as f:
         pickle.dump(results, f)
