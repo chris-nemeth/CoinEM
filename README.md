@@ -1,8 +1,8 @@
-# C🪙in EM 
+# Coin EM 
 
-Learning rate free expectation maximation in JAX.
+This repository contains code for implementing Coin EM and SVGD EM in JAX.
 
-## Installation guide:
+## Installation Guide
 
 **(1)** Clone the repository:
 ```
