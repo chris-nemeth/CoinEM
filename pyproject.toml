@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "coinem"
 version = "0.0.1"
-description = "Coin expectation maximisation"
-authors = ["Daniel Dodd <daniel_dodd@icloud.com>"]
+description = "Coin EM"
+authors = ["Anonymous"]
 license = "MIT"
 readme = "README.md"
 
