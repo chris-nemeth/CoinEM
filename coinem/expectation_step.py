@@ -51,8 +51,6 @@ class AbstractExpectationStep(Pytree):
 from jaxtyping import PyTree
 from typing import Callable
 
-from coinem.gradient_flow import ravel_pytree
-
 
 @dataclass
 class SteinExpectationStep(AbstractExpectationStep):
@@ -75,26 +73,14 @@ class SteinExpectationStep(AbstractExpectationStep):
         latent_opt_state = expectation_state.optimiser_state
 
         # Find negative Stein gradient score of the latent particles (negative, since we are maximising, but optimisers minimise!)
-        # latent_score = lambda x: self.model.score_latent_particles(
-        #     x, theta=theta, data=data
-        # )
+        latent_score = lambda x: self.model.score_latent_particles(
+            x, theta=theta, data=data
+        )
 
-        # Compute the score function:
-        s = self.model.score_latent_particles(latent, theta=theta, data=data)  # ∇x p(x)
-
-        # Flatten the particles and the score function:
-        flat_particles, unravel_func = ravel_pytree(latent)
-        flat_score, _ = ravel_pytree(s)
-
-        num_particles = flat_particles.shape[0]
-
-        # Compute the kernel and its gradient:
-        K, dK = self.kernel.K_dK(flat_particles)  # Kxx, ∇x Kxx
-
-        # Compute the Stein gradient Φ(x) = (Kxx ∇x p(x) + ∇x Kxx) / N:
-        flat_stein = (jnp.matmul(K, flat_score) + dK) / num_particles
-        negative_flat_stein_grad = -flat_stein
-        negative_latent_grad = unravel_func(negative_flat_stein_grad)
+        latent_grad = stein_grad(
+            particles=latent, score=latent_score, kernel=self.kernel
+        )
+        negative_latent_grad = jtu.tree_map(lambda x: -x, latent_grad)
 
         # Find update rule for theta
         latent_updates, latent_new_opt_state = self.optimiser.update(
@@ -199,14 +185,6 @@ class SoulExpectationStep(AbstractExpectationStep):
             ) * jr.normal(subkey, shape=ravel_score_adjusted_latent.shape)
 
             new = unravel(ravel_latent_new)
-
-            # new = (
-            #     particle
-            #     + self.step_size * self.model.score_latent(particle, theta, data)
-            #     + jnp.sqrt(2.0 * self.step_size)
-            #     * jr.normal(subkey, shape=particle.shape)
-            # )
-
             return (new, key), new
 
         _, latent_new = lax.scan(
