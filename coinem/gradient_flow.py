@@ -29,7 +29,7 @@ def stein_grad(
 
     # Flatten the particles and the score function:
     flat_particles, unravel_func = _ravel_pytree_to_ND_shape(particles)
-    flat_score, _ = (s)
+    flat_score, _ = _ravel_pytree_to_ND_shape(s)
 
     num_particles = flat_particles.shape[0]
 

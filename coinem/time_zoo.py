@@ -1,6 +1,7 @@
 """ 🐒 Versions of the expectation maximisation algorithm. 🦓 """
 
 import jax.random as jr
+import optax as ox
 
 from jax.random import KeyArray
 from jaxtyping import Array, Float
@@ -15,9 +16,7 @@ from coinem.expectation_step import (
     ParticleGradientExpectationStep,
 )
 from coinem.dataset import Dataset
-from coinem.gradient_transforms import cocob, GradientTransformation, dog
-
-import optax as ox
+from coinem.gradient_transforms import cocob, GradientTransformation
 
 
 def svgd(
@@ -107,51 +106,6 @@ def coin_svgd(
         key=key,
         metrics=metrics,
     )
-
-
-def dog_svgd(
-    model: AbstractModel,
-    data: Dataset,
-    latent_init: Float[Array, "N D"],
-    theta_init: Float[Array, "Q"],
-    max_time: float,
-    batch_size: int = -1,
-    key: KeyArray = jr.PRNGKey(42),
-    alpha: float = 0.0,
-    metrics: Dict[
-        str, Callable[[Float[Array, "N D"], Float[Array, "N D"]], Float[Array, "1"]]
-    ] = None,
-) -> Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]:
-    """Perform the CoinEM algorithm.
-
-    Args:
-        model (AbstractModel): The model.
-        data (Dataset): The dataset.
-        latent_init (Float[Array, "N D"]): The initial latent particles.
-        theta_init (Float[Array, "Q"]): The initial parameters.
-        max_time (int): The number of steps to perform, K.
-        batch_size (int, optional): The batch size. Defaults to -1.
-        key (KeyArray, optional): The random key. Defaults to jr.PRNGKey(42).
-
-    Returns:
-        Tuple[Float[Array, "K N D"], Float[Array, "K Q"]]: The latent particles and parameters.
-    """
-
-    optimiser = dog()
-
-    return svgd(
-        model=model,
-        data=data,
-        latent_init=latent_init,
-        theta_init=theta_init,
-        latent_optimiser=optimiser,
-        theta_optimiser=optimiser,
-        max_time=max_time,
-        batch_size=batch_size,
-        key=key,
-        metrics=metrics,
-    )
-
 
 def adam_svgd(
     model: AbstractModel,

@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import NamedTuple, Tuple
 from jax.random import KeyArray
 
-import optax as ox
 import jax.numpy as jnp
 import jax.random as jr
 
@@ -20,7 +19,6 @@ from jax import flatten_util
 import jax.tree_util as jtu
 
 import optax as ox
-
 
 class ExpectationState(NamedTuple):
     optimiser_state: OptimiserState
