@@ -21,6 +21,7 @@ optax = "^0.1.9"
 pandas = "^2.2.1"
 networkx = "^3.2.1"
 scikit-learn = "^1.4.1.post1"
+tqdm = "^4.66.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "23.1.0"
